@@ -1,0 +1,14 @@
+# 插件打包产物（由 main.js / info.json 等源文件构建）
+*.potext
+
+# 依赖
+node_modules/
+
+# 日志
+*.log
+
+# 编辑器 / 系统
+.idea/
+*.iml
+.DS_Store
+Thumbs.db

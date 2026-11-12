@@ -1,69 +1,43 @@
-# Pot-App 生词本插件模板仓库 (以 [Anki](https://apps.ankiweb.net) 为例)
+# Pot 收集插件：本地生词本
 
-### 此仓库为模板仓库，编写插件时可以直接由此仓库创建插件仓库
+把 Pot 的翻译结果保存到本地部署的生词本服务（`pot-vocabulary-server`）。
 
-## 插件编写指南
+## 配置项
 
-### 1. 插件仓库创建
+在 Pot 的「插件设置 - 本地生词本」中只需填写一项：
 
-- 以此仓库为模板创建一个新的仓库
-- 仓库名为 `pot-app-collection-plugin-<插件名>`，例如 `pot-app-collection-plugin-anki`
+| 配置 | 说明 | 示例 |
+| --- | --- | --- |
+| 服务地址 | 生词本服务的地址，不填默认 `http://127.0.0.1:8050` | `http://127.0.0.1:8050` |
 
-### 2. 插件信息配置
+无需填写「来源名称」：Pot 调用收集插件时只传原文、译文字符串和该插件自己的配置（见 `TargetArea` 中的 `func(sourceText.trim(), result.toString(), { config, utils })`），插件无法得知结果是哪个翻译服务产生的，因此不记录来源。同一个词（原文 + 语言对）只会有一条主题，重复收藏会覆盖旧结果。
 
-编辑 `info.json` 文件，修改以下字段：
+## 数据结构
 
-- `id`：插件唯一 id，必须以`plugin`开头，例如 `plugin.com.pot-app.anki`
-- `homepage`: 插件主页，填写你的仓库地址即可，例如 `https://github.com/pot-app/pot-app-collection-plugin-template`
-- `display`: 插件显示名称，例如 `Anki`
-- `icon`: 插件图标，例如 `anki.svg`
-- `needs`: 插件依赖，一个数组，每个依赖为一个对象，包含以下字段：
-  - `key`: 依赖 key，对应该项依赖在配置文件中的名称，例如 `port`
-  - `display`: 依赖显示名称，对应用户显示的名称，例如 `端口号`
-  - `type`: 组件类型 `input` | `select`
-  - `options`: 选项列表(仅 select 组件需要)，例如 `{"engine_a":"Engina A","engine_b":"Engina B"}`
+插件向服务提交：
 
-### 3. 插件编写/编译
-
-编辑 `main.js` 实现 `collection` 函数
-
-#### 输入参数
-```javascript
-// config: config map
-// detect: detected source language
-// setResult: function to set result text
-// utils: some tools
-//     http: tauri http module
-//     readBinaryFile: function
-//     readTextFile: function
-//     Database: tauri Database class
-//     CryptoJS: CryptoJS module
-//     cacheDir: cache dir path
-//     pluginDir: current plugin dir 
-//     osType: "Windows_NT" | "Darwin" | "Linux"
-async function collection(source, target, options = {}) {
-  const { config, utils } = options;
-  const { http, readBinaryFile, readTextFile, Database, CryptoJS, run, cacheDir, pluginDir, osType } = utils;
-  const { fetch, Body } = http;
+```json
+{
+  "sourceText": "hello",
+  "sourceLang": "",
+  "targetLang": "",
+  "contentText": "你好；喂；哈喽",
+  "contentJson": ""
 }
 ```
 
-#### 返回值
+- 当前 Pot 传进来的 `target` 是译文字符串（`result.toString()`），`contentText` 即该字符串，`contentJson` 为空。
+- 旧版本或特殊翻译插件传 `{ explanations, pronunciations }` 结构时，`contentText` 转成可读纯文本，`contentJson` 保留原始结构。
 
-```javascript
-return true;
-```
+## 打包
 
-### 4. 打包 pot 插件
+把 `info.json`、`main.js`、`vocabulary.svg` 压缩为 zip 并重命名为 `plugin.com.zizaizhiwu.local-vocabulary.potext`，即可在 Pot 中安装。推送到 GitHub 后 Actions 会自动打包。
 
-1. 将`main.js`文件和`info.json`以及图标文件压缩为 zip 文件。
+## 接口约定
 
-2. 将文件重命名为`<插件id>.potext`，例如`plugin.com.pot-app.anki.potext`,即可得到 pot 需要的插件。
+- `POST /api/topics` 保存结果
+- `POST /api/topics/list` 列表，请求体 `{ "page": 1, "size": 20, "keyword": "" }`
+- `GET /api/topics/{id}` 详情
+- `GET /api/topics/{id}/next`、`/prev` 相邻主题
 
-## 自动编译打包
-
-本仓库配置了 Github Actions，可以实现推送后自动编译打包插件。
-
-每次将仓库推送到 GitHub 之后 actions 会自动运行，将打包好的插件上传到 artifact，在 actions 页面可以下载
-
-每次提交 Tag 之后，actions 会自动运行，将打包好的插件上传到 release，在 release 页面可以下载打包好的插件
+详见 `../pot-app-collection-plugin-local-vocabulary-java/README.md`。
